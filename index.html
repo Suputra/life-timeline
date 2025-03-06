@@ -170,6 +170,42 @@
             const eventType = document.getElementById('event-type');
             const closeDetailsBtn = document.getElementById('close-details');
             
+            // Track selected node
+            let selectedNode = null;
+            
+            // Function to highlight nodes and links
+            const highlightNodes = (nodeId) => {
+                if (!nodeId) {
+                    // Reset if no node is selected
+                    if (!selectedNode) {
+                        Graph.nodeColor('#333').linkColor('#999');
+                    } else {
+                        // Keep highlighting for selected node
+                        const neighbors = new Set();
+                        timelineData.links.forEach(link => {
+                            if (link.source.id === selectedNode.id) neighbors.add(link.target.id);
+                            if (link.target.id === selectedNode.id) neighbors.add(link.source.id);
+                        });
+                        neighbors.add(selectedNode.id);
+
+                        Graph.nodeColor(n => neighbors.has(n.id) ? '#2196F3' : '#ccc')
+                             .linkColor(l => (l.source.id === selectedNode.id || l.target.id === selectedNode.id) ? '#2196F3' : '#eee');
+                    }
+                    return;
+                }
+
+                // Highlight the node and its neighbors
+                const neighbors = new Set();
+                timelineData.links.forEach(link => {
+                    if (link.source.id === nodeId) neighbors.add(link.target.id);
+                    if (link.target.id === nodeId) neighbors.add(link.source.id);
+                });
+                neighbors.add(nodeId);
+
+                Graph.nodeColor(n => neighbors.has(n.id) ? '#2196F3' : '#ccc')
+                     .linkColor(l => (l.source.id === nodeId || l.target.id === nodeId) ? '#2196F3' : '#eee');
+            };
+            
             // Sort nodes by date
             const sortedNodes = [...timelineData.nodes].sort((a, b) => new Date(a.date) - new Date(b.date));
             const earliestDate = new Date(sortedNodes[0].date).getTime();
@@ -194,6 +230,12 @@
                 .nodeColor('#333')
                 .linkColor('#999')
                 .onNodeClick(node => {
+                    // Update selected node
+                    selectedNode = node;
+                    
+                    // Highlight the selected node and its connections
+                    highlightNodes(node.id);
+                    
                     // Update details panel
                     eventTitle.textContent = node.name;
                     eventDate.textContent = new Date(node.date).toLocaleDateString();
@@ -208,11 +250,39 @@
                     Graph.centerAt(node.x, node.y, 800);
                     Graph.zoom(1.2, 800);
                 })
+                // Add background click handler to clear selection
+                .onBackgroundClick(() => {
+                    // Clear selection
+                    selectedNode = null;
+                    Graph.nodeColor('#333').linkColor('#999');
+                    
+                    // Hide details panel
+                    eventDetails.classList.remove('visible');
+                    eventDetails.classList.add('hidden');
+                })
                 // Forces configuration
                 .d3Force('charge', d3.forceManyBody().strength(-100))
                 .d3Force('link', d3.forceLink().id(d => d.id).distance(50))
                 .d3Force('x', d3.forceX(node => getTimelineX(node.date)).strength(0.3))
                 .d3Force('y', d3.forceY(graphElement.clientHeight / 2).strength(0.1));
+
+            // Add hover effects
+            Graph
+              .onNodeHover(node => {
+                // If we have a selected node, don't allow hover highlighting on other nodes
+                if (selectedNode) {
+                    return; // Keep the current highlighting for the selected node
+                }
+                
+                // No node is selected, so show hover effects
+                if (!node) {
+                    Graph.nodeColor('#333').linkColor('#999');
+                    return;
+                }
+
+                // Highlight the hovered node and its neighbors
+                highlightNodes(node.id);
+              });
 
             // Window resize handler
             window.addEventListener('resize', () => {
@@ -224,6 +294,11 @@
             closeDetailsBtn.addEventListener('click', () => {
                 eventDetails.classList.remove('visible');
                 eventDetails.classList.add('hidden');
+                
+                // Optionally clear the selection when closing details
+                // Comment out the next two lines if you want highlighting to persist after closing
+                selectedNode = null;
+                Graph.nodeColor('#333').linkColor('#999');
             });
         });
     </script>
