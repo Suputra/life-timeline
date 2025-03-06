@@ -6,6 +6,12 @@
     <title>Life Timeline</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://unpkg.com/force-graph"></script>
+    <!-- Load timeline data -->
+    <script src="timeline-data.js"></script>
+    <!-- Add Google Fonts - Nunito is a rounded sans-serif font -->
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Add icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
             margin: 0;
@@ -14,39 +20,132 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f5f5f5;
-            color: #333;
+            font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, 'Helvetica Neue', sans-serif;
+            background-color: #fdf6e3; /* Solarized light background */
+            color: #657b83; /* Solarized base00 text color */
+            overflow: hidden; /* Prevent scrolling on the body */
+            line-height: 1.5;
         }
 
         header {
-            background-color: white;
-            padding: 1rem 2rem;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            background-color: #eee8d5; /* Solarized light secondary background */
+            padding: 0 2rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            height: 60px; /* Fixed height for header */
+            border-bottom: 1px solid #e6ddc5;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+
+        .header-logo {
+            display: flex;
+            align-items: center;
+            margin-right: 2rem;
+        }
+
+        .header-logo i {
+            font-size: 1.4rem;
+            color: #268bd2;
+            margin-right: 0.7rem;
+        }
+
+        .back-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            color: #657b83;
+            margin-right: 0.7rem;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .back-btn i {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1rem;
+        }
+
+        .back-btn:hover {
+            background-color: rgba(38, 139, 210, 0.1);
+            color: #268bd2;
+        }
+
+        header h3 {
+            color: #586e75; /* Solarized base01 - darker text for headings */
+            font-weight: 600;
+            letter-spacing: 0.01em;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .header-btn {
+            background: none;
+            border: none;
+            font-family: 'Nunito', sans-serif;
+            font-size: 0.9rem;
+            color: #657b83;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            transition: all 0.2s ease;
+        }
+
+        .header-btn:hover {
+            background-color: rgba(38, 139, 210, 0.1);
+            color: #268bd2;
+        }
+
+        .header-btn i {
+            font-size: 0.9rem;
         }
 
         main {
             display: flex;
-            height: calc(100vh - 60px);
+            height: calc(100vh - 60px); /* Calculate exact height based on header */
+            overflow: hidden; /* Prevent scrolling in main container */
         }
 
         #timeline-container {
             flex: 1;
             height: 100%;
+            overflow: hidden; /* Prevent scrolling in timeline container */
+            padding: 10px;
         }
 
         #graph {
             width: 100%;
             height: 100%;
+            overflow: hidden; /* Prevent scrolling in graph */
+            border-radius: 8px;
+            background-color: #fdf6e3;
         }
 
         #event-details {
             width: 500px;
-            background-color: white;
-            padding: 1.5rem;
-            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.15);
+            background-color: #fcf9f0; /* Slightly lighter than base background */
+            padding: 1.8rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
             overflow-y: auto;
-            transition: transform 0.3s ease;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
             position: fixed;
             bottom: 20px;
             left: 50%;
@@ -54,11 +153,13 @@
             height: auto;
             max-height: 80vh;
             z-index: 10;
-            border-radius: 12px;
+            border-radius: 14px;
+            border: 1px solid #eee8d5;
         }
 
         #event-details.hidden {
             transform: translateX(-50%) translateY(150%);
+            box-shadow: 0 0 0 rgba(0, 0, 0, 0);
         }
 
         #event-details.visible {
@@ -68,16 +169,18 @@
         .event-header {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 1rem;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 0.5rem;
+            margin-bottom: 1.2rem;
+            border-bottom: 1px solid #eee8d5;
+            padding-bottom: 0.8rem;
         }
 
         #event-title {
-            font-size: 1.2rem;
+            font-size: 1.3rem;
             margin-right: 1rem;
             flex: 1;
-            color: #2196F3;
+            color: #268bd2; /* Solarized blue */
+            font-weight: 600;
+            letter-spacing: 0.01em;
         }
 
         #close-details {
@@ -85,27 +188,223 @@
             border: none;
             font-size: 1.5rem;
             cursor: pointer;
-            color: #999;
+            color: #93a1a1; /* Solarized base1 */
+            transition: color 0.2s ease;
+            border-radius: 50%;
+            height: 30px;
+            width: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #close-details:hover {
+            color: #657b83;
+            background-color: #eee8d5;
         }
 
         #event-description {
-            margin-bottom: 1rem;
-            line-height: 1.5;
+            margin-bottom: 1.2rem;
+            line-height: 1.6;
+            color: #657b83;
+        }
+
+        #event-date {
+            margin-bottom: 0.8rem;
+            color: #93a1a1; /* Solarized base1 */
+            font-size: 0.95rem;
         }
 
         #event-type {
             display: inline-block;
-            padding: 0.2rem 0.5rem;
-            background-color: #f0f0f0;
-            border-radius: 4px;
-            font-size: 0.8rem;
+            padding: 0.3rem 0.8rem;
+            background-color: #eee8d5;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: #586e75;
+            font-weight: 600;
+        }
+
+        /* Filter Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 20;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.2);
+        }
+
+        .modal.visible {
+            display: block;
+        }
+
+        .modal-content {
+            background-color: #fcf9f0;
+            margin: 10% auto;
+            padding: 1.8rem;
+            width: 90%;
+            max-width: 500px;
+            border-radius: 14px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid #eee8d5;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.2rem;
+            border-bottom: 1px solid #eee8d5;
+            padding-bottom: 0.8rem;
+        }
+
+        .modal-header h3 {
+            color: #268bd2;
+            font-size: 1.3rem;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #93a1a1;
+            transition: color 0.2s ease;
+            border-radius: 50%;
+            height: 30px;
+            width: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-btn:hover {
+            color: #657b83;
+            background-color: #eee8d5;
+        }
+
+        .modal-body {
+            margin-bottom: 20px;
+        }
+
+        .modal-body p {
+            color: #657b83;
+            font-size: 1rem;
+            margin-bottom: 10px;
+        }
+
+        .filter-options {
+            margin-bottom: 1.2rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+        }
+
+        .filter-options label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            padding: 0.4rem 0.8rem;
+            background-color: #eee8d5;
+            border-radius: 20px;
+            transition: all 0.2s ease;
+        }
+
+        .filter-options label:hover {
+            background-color: rgba(38, 139, 210, 0.1);
+        }
+
+        .filter-options input[type="checkbox"] {
+            margin-right: 0.5rem;
+            cursor: pointer;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .action-btn {
+            background: none;
+            border: none;
+            font-family: 'Nunito', sans-serif;
+            font-size: 0.9rem;
+            color: #657b83;
+            cursor: pointer;
+            padding: 0.4rem 1.2rem;
+            border-radius: 20px;
+            transition: all 0.2s ease;
+        }
+
+        .primary-btn {
+            background-color: #268bd2;
+            color: #fff;
+        }
+
+        .primary-btn:hover {
+            background-color: #2078b4;
+        }
+
+        .action-btn:not(.primary-btn):hover {
+            background-color: rgba(38, 139, 210, 0.1);
+            color: #268bd2;
         }
     </style>
 </head>
 <body>
     <header>
-        <h3>Life Timeline</h3>
+        <div class="header-left">
+            <div class="header-logo">
+                <a href="https://suputra.github.io" class="back-btn">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+                <h3>Life Timeline</h3>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="header-btn" id="reset-btn">
+                <i class="fas fa-redo-alt"></i>
+                Reset Graph
+            </button>
+            <button class="header-btn" id="filter-btn">
+                <i class="fas fa-filter"></i>
+                Filter
+            </button>
+            <button class="header-btn">
+                <i class="fas fa-download"></i>
+                Export
+            </button>
+        </div>
     </header>
+    
+    <!-- Filter Modal -->
+    <div id="filter-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Filter Events</h3>
+                <button id="close-filter" class="close-btn">×</button>
+            </div>
+            <div class="modal-body">
+                <p>Select event types to display:</p>
+                <div id="filter-options" class="filter-options">
+                    <!-- Filter checkboxes will be dynamically added here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="apply-filter" class="action-btn primary-btn">Apply</button>
+                <button id="reset-filter" class="action-btn">Reset</button>
+            </div>
+        </div>
+    </div>
     
     <main>
         <div id="timeline-container">
@@ -124,42 +423,6 @@
     </main>
 
     <script>
-        // Sample timeline data
-        const timelineData = {
-            nodes: [
-                { id: "birth", name: "Birth", date: "1990-01-01", description: "The beginning of your journey.", type: "milestone" },
-                { id: "today", name: "Today", date: new Date().toISOString().split('T')[0], description: "Your current position in the timeline.", type: "present" },
-                { id: "school", name: "Started School", date: "1995-09-01", description: "First day of elementary school.", type: "education" },
-                { id: "highschool", name: "High School", date: "2004-09-01", description: "Started high school.", type: "education" },
-                { id: "college", name: "College", date: "2008-09-01", description: "Started college education.", type: "education" },
-                { id: "graduation", name: "Graduation", date: "2012-05-15", description: "Graduated from college with a degree.", type: "milestone" },
-                { id: "firstjob", name: "First Job", date: "2012-07-10", description: "Started first professional job.", type: "career" },
-                { id: "moved", name: "Moved to New City", date: "2015-03-20", description: "Relocated to a new city for better opportunities.", type: "life" },
-                { id: "promotion", name: "Major Promotion", date: "2018-11-05", description: "Received a significant promotion at work.", type: "career" },
-                { id: "travel", name: "World Travel", date: "2024-06-01", description: "Plan to travel around the world for 3 months.", type: "goal" },
-                { id: "house", name: "Buy a House", date: "2025-01-15", description: "Goal to purchase first home.", type: "goal" },
-                { id: "business", name: "Start Business", date: "2026-03-10", description: "Launch own business venture.", type: "goal" },
-                { id: "family", name: "Start Family", date: "2027-05-20", description: "Begin a family.", type: "goal" },
-                { id: "retirement", name: "Early Retirement", date: "2040-01-01", description: "Goal to achieve financial independence and retire early.", type: "goal" }
-            ],
-            links: [
-                { source: "birth", target: "school" },
-                { source: "school", target: "highschool" },
-                { source: "highschool", target: "college" },
-                { source: "college", target: "graduation" },
-                { source: "graduation", target: "firstjob" },
-                { source: "firstjob", target: "moved" },
-                { source: "moved", target: "promotion" },
-                { source: "promotion", target: "today" },
-                { source: "today", target: "travel" },
-                { source: "today", target: "house" },
-                { source: "house", target: "business" },
-                { source: "house", target: "family" },
-                { source: "business", target: "retirement" },
-                { source: "family", target: "retirement" }
-            ]
-        };
-
         document.addEventListener('DOMContentLoaded', () => {
             // DOM elements
             const graphElement = document.getElementById('graph');
@@ -170,41 +433,180 @@
             const eventType = document.getElementById('event-type');
             const closeDetailsBtn = document.getElementById('close-details');
             
+            // Filter modal elements
+            const filterBtn = document.getElementById('filter-btn');
+            const filterModal = document.getElementById('filter-modal');
+            const closeFilterBtn = document.getElementById('close-filter');
+            const filterOptions = document.getElementById('filter-options');
+            const applyFilterBtn = document.getElementById('apply-filter');
+            const resetFilterBtn = document.getElementById('reset-filter');
+            
             // Track selected node
             let selectedNode = null;
+            let timelineData = TIMELINE_DATA;
+            let filteredData = {...timelineData};
+            let activeFilters = new Set();
+            
+            // Extract unique event types
+            const getEventTypes = () => {
+                const types = new Set();
+                timelineData.nodes.forEach(node => {
+                    if (node.type) {
+                        types.add(node.type);
+                    }
+                });
+                return Array.from(types);
+            };
+            
+            // Populate filter options
+            const populateFilterOptions = () => {
+                filterOptions.innerHTML = '';
+                const eventTypes = getEventTypes();
+                
+                eventTypes.forEach(type => {
+                    const label = document.createElement('label');
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.value = type;
+                    checkbox.checked = !activeFilters.size || activeFilters.has(type);
+                    checkbox.id = `filter-${type}`;
+                    
+                    label.appendChild(checkbox);
+                    label.appendChild(document.createTextNode(` ${type.charAt(0).toUpperCase() + type.slice(1)}`));
+                    filterOptions.appendChild(label);
+                });
+            };
+            
+            // Filter data based on selected types
+            const filterData = () => {
+                if (!activeFilters.size) {
+                    filteredData = {...timelineData};
+                    return;
+                }
+                
+                // Filter nodes based on selected types
+                const filteredNodes = timelineData.nodes.filter(node => activeFilters.has(node.type));
+                const filteredNodeIds = new Set(filteredNodes.map(node => node.id));
+                
+                // Filter links that connect to filtered nodes
+                const filteredLinks = timelineData.links.filter(link => 
+                    filteredNodeIds.has(link.source.id || link.source) && 
+                    filteredNodeIds.has(link.target.id || link.target)
+                );
+                
+                filteredData = {
+                    nodes: filteredNodes,
+                    links: filteredLinks
+                };
+            };
+            
+            // Function to update the graph with filtered data
+            const updateGraph = () => {
+                // Apply filters to data
+                filterData();
+                
+                // Update the graph with filtered data
+                Graph.graphData(filteredData);
+                
+                // If we had a selected node and it's still in the filtered data, keep it highlighted
+                if (selectedNode) {
+                    const nodeStillExists = filteredData.nodes.some(node => node.id === selectedNode.id);
+                    if (!nodeStillExists) {
+                        // Selected node was filtered out
+                        selectedNode = null;
+                        eventDetails.classList.remove('visible');
+                        eventDetails.classList.add('hidden');
+                    } else {
+                        // Re-highlight the selected node
+                        highlightNodes(selectedNode.id);
+                    }
+                }
+                
+                // Reset zoom to fit all visible nodes
+                Graph.zoomToFit(800, 40);
+            };
+            
+            // Event listeners for filter modal
+            filterBtn.addEventListener('click', () => {
+                populateFilterOptions();
+                filterModal.classList.add('visible');
+            });
+            
+            closeFilterBtn.addEventListener('click', () => {
+                filterModal.classList.remove('visible');
+            });
+            
+            applyFilterBtn.addEventListener('click', () => {
+                // Get all checked filter options
+                activeFilters.clear();
+                const checkedOptions = filterOptions.querySelectorAll('input[type="checkbox"]:checked');
+                checkedOptions.forEach(option => {
+                    activeFilters.add(option.value);
+                });
+                
+                // Update graph with filtered data
+                updateGraph();
+                
+                // Close the modal
+                filterModal.classList.remove('visible');
+            });
+            
+            resetFilterBtn.addEventListener('click', () => {
+                // Reset all checkboxes to checked
+                const allOptions = filterOptions.querySelectorAll('input[type="checkbox"]');
+                allOptions.forEach(option => {
+                    option.checked = true;
+                });
+                
+                // Clear active filters
+                activeFilters.clear();
+                
+                // Apply reset (show all nodes)
+                updateGraph();
+                
+                // Close the modal
+                filterModal.classList.remove('visible');
+            });
             
             // Function to highlight nodes and links
             const highlightNodes = (nodeId) => {
-                if (!nodeId) {
+                if (!nodeId || !filteredData) {
                     // Reset if no node is selected
                     if (!selectedNode) {
-                        Graph.nodeColor('#333').linkColor('#999');
+                        Graph.nodeColor('#657b83').linkColor('#93a1a1');
                     } else {
                         // Keep highlighting for selected node
                         const neighbors = new Set();
-                        timelineData.links.forEach(link => {
+                        filteredData.links.forEach(link => {
                             if (link.source.id === selectedNode.id) neighbors.add(link.target.id);
                             if (link.target.id === selectedNode.id) neighbors.add(link.source.id);
                         });
                         neighbors.add(selectedNode.id);
 
-                        Graph.nodeColor(n => neighbors.has(n.id) ? '#2196F3' : '#ccc')
-                             .linkColor(l => (l.source.id === selectedNode.id || l.target.id === selectedNode.id) ? '#2196F3' : '#eee');
+                        Graph.nodeColor(n => neighbors.has(n.id) ? '#268bd2' : '#eee8d5')
+                             .linkColor(l => (l.source.id === selectedNode.id || l.target.id === selectedNode.id) ? '#268bd2' : '#d8d4c5');
                     }
                     return;
                 }
 
                 // Highlight the node and its neighbors
                 const neighbors = new Set();
-                timelineData.links.forEach(link => {
+                filteredData.links.forEach(link => {
                     if (link.source.id === nodeId) neighbors.add(link.target.id);
                     if (link.target.id === nodeId) neighbors.add(link.source.id);
                 });
                 neighbors.add(nodeId);
 
-                Graph.nodeColor(n => neighbors.has(n.id) ? '#2196F3' : '#ccc')
-                     .linkColor(l => (l.source.id === nodeId || l.target.id === nodeId) ? '#2196F3' : '#eee');
+                Graph.nodeColor(n => neighbors.has(n.id) ? '#268bd2' : '#eee8d5')
+                     .linkColor(l => (l.source.id === nodeId || l.target.id === nodeId) ? '#268bd2' : '#d8d4c5');
             };
+            
+            // Initialize the visualization
+            // Update today's date in the data
+            const todayNode = timelineData.nodes.find(node => node.id === 'today');
+            if (todayNode) {
+                todayNode.date = new Date().toISOString().split('T')[0];
+            }
             
             // Sort nodes by date
             const sortedNodes = [...timelineData.nodes].sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -221,14 +623,14 @@
             };
             
             // Initialize the graph
-            const Graph = ForceGraph()
+            window.Graph = ForceGraph()
                 (graphElement)
-                .graphData(timelineData)
+                .graphData(filteredData)
                 .nodeId('id')
                 .nodeVal(5)
                 .nodeLabel('name')
-                .nodeColor('#333')
-                .linkColor('#999')
+                .nodeColor('#657b83') // Solarized base00 for nodes
+                .linkColor('#93a1a1') // Solarized base1 for links
                 .onNodeClick(node => {
                     // Update selected node
                     selectedNode = node;
@@ -254,7 +656,7 @@
                 .onBackgroundClick(() => {
                     // Clear selection
                     selectedNode = null;
-                    Graph.nodeColor('#333').linkColor('#999');
+                    Graph.nodeColor('#657b83').linkColor('#93a1a1');
                     
                     // Hide details panel
                     eventDetails.classList.remove('visible');
@@ -276,7 +678,7 @@
                 
                 // No node is selected, so show hover effects
                 if (!node) {
-                    Graph.nodeColor('#333').linkColor('#999');
+                    Graph.nodeColor('#657b83').linkColor('#93a1a1');
                     return;
                 }
 
@@ -295,10 +697,35 @@
                 eventDetails.classList.remove('visible');
                 eventDetails.classList.add('hidden');
                 
-                // Optionally clear the selection when closing details
+                // Optionally clear the selection when closing
                 // Comment out the next two lines if you want highlighting to persist after closing
                 selectedNode = null;
-                Graph.nodeColor('#333').linkColor('#999');
+                if (Graph) {
+                    Graph.nodeColor('#657b83').linkColor('#93a1a1');
+                }
+            });
+
+            // Reset graph button handler
+            document.getElementById('reset-btn').addEventListener('click', () => {
+                // Clear selection
+                selectedNode = null;
+                
+                // Reset node and link colors
+                Graph.nodeColor('#657b83').linkColor('#93a1a1');
+                
+                // Hide details panel if visible
+                eventDetails.classList.remove('visible');
+                eventDetails.classList.add('hidden');
+                
+                // Reset active filters
+                activeFilters.clear();
+                
+                // Reset to original data
+                filteredData = {...timelineData};
+                Graph.graphData(filteredData);
+                
+                // Reset zoom and center the graph
+                Graph.zoomToFit(800, 40);
             });
         });
     </script>
