@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Life Timeline</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://unpkg.com/force-graph"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        header {
+            background-color: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        main {
+            display: flex;
+            height: calc(100vh - 60px);
+        }
+
+        #timeline-container {
+            flex: 1;
+            height: 100%;
+        }
+
+        #graph {
+            width: 100%;
+            height: 100%;
+        }
+
+        #event-details {
+            width: 500px;
+            background-color: white;
+            padding: 1.5rem;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.15);
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(0);
+            height: auto;
+            max-height: 80vh;
+            z-index: 10;
+            border-radius: 12px;
+        }
+
+        #event-details.hidden {
+            transform: translateX(-50%) translateY(150%);
+        }
+
+        #event-details.visible {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .event-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 0.5rem;
+        }
+
+        #event-title {
+            font-size: 1.2rem;
+            margin-right: 1rem;
+            flex: 1;
+            color: #2196F3;
+        }
+
+        #close-details {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #999;
+        }
+
+        #event-description {
+            margin-bottom: 1rem;
+            line-height: 1.5;
+        }
+
+        #event-type {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h3>Life Timeline</h3>
+    </header>
+    
+    <main>
+        <div id="timeline-container">
+            <div id="graph"></div>
+        </div>
+        
+        <div id="event-details" class="hidden">
+            <div class="event-header">
+                <h2 id="event-title">Event Title</h2>
+                <button id="close-details">×</button>
+            </div>
+            <div id="event-description">Event description will appear here.</div>
+            <div id="event-date"></div>
+            <div id="event-type">Event Type</div>
+        </div>
+    </main>
+
+    <script>
+        // Sample timeline data
+        const timelineData = {
+            nodes: [
+                { id: "birth", name: "Birth", date: "1990-01-01", description: "The beginning of your journey.", type: "milestone" },
+                { id: "today", name: "Today", date: new Date().toISOString().split('T')[0], description: "Your current position in the timeline.", type: "present" },
+                { id: "school", name: "Started School", date: "1995-09-01", description: "First day of elementary school.", type: "education" },
+                { id: "highschool", name: "High School", date: "2004-09-01", description: "Started high school.", type: "education" },
+                { id: "college", name: "College", date: "2008-09-01", description: "Started college education.", type: "education" },
+                { id: "graduation", name: "Graduation", date: "2012-05-15", description: "Graduated from college with a degree.", type: "milestone" },
+                { id: "firstjob", name: "First Job", date: "2012-07-10", description: "Started first professional job.", type: "career" },
+                { id: "moved", name: "Moved to New City", date: "2015-03-20", description: "Relocated to a new city for better opportunities.", type: "life" },
+                { id: "promotion", name: "Major Promotion", date: "2018-11-05", description: "Received a significant promotion at work.", type: "career" },
+                { id: "travel", name: "World Travel", date: "2024-06-01", description: "Plan to travel around the world for 3 months.", type: "goal" },
+                { id: "house", name: "Buy a House", date: "2025-01-15", description: "Goal to purchase first home.", type: "goal" },
+                { id: "business", name: "Start Business", date: "2026-03-10", description: "Launch own business venture.", type: "goal" },
+                { id: "family", name: "Start Family", date: "2027-05-20", description: "Begin a family.", type: "goal" },
+                { id: "retirement", name: "Early Retirement", date: "2040-01-01", description: "Goal to achieve financial independence and retire early.", type: "goal" }
+            ],
+            links: [
+                { source: "birth", target: "school" },
+                { source: "school", target: "highschool" },
+                { source: "highschool", target: "college" },
+                { source: "college", target: "graduation" },
+                { source: "graduation", target: "firstjob" },
+                { source: "firstjob", target: "moved" },
+                { source: "moved", target: "promotion" },
+                { source: "promotion", target: "today" },
+                { source: "today", target: "travel" },
+                { source: "today", target: "house" },
+                { source: "house", target: "business" },
+                { source: "house", target: "family" },
+                { source: "business", target: "retirement" },
+                { source: "family", target: "retirement" }
+            ]
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // DOM elements
+            const graphElement = document.getElementById('graph');
+            const eventDetails = document.getElementById('event-details');
+            const eventTitle = document.getElementById('event-title');
+            const eventDate = document.getElementById('event-date');
+            const eventDescription = document.getElementById('event-description');
+            const eventType = document.getElementById('event-type');
+            const closeDetailsBtn = document.getElementById('close-details');
+            
+            // Sort nodes by date
+            const sortedNodes = [...timelineData.nodes].sort((a, b) => new Date(a.date) - new Date(b.date));
+            const earliestDate = new Date(sortedNodes[0].date).getTime();
+            const latestDate = new Date(sortedNodes[sortedNodes.length - 1].date).getTime();
+            const timeRange = latestDate - earliestDate;
+            
+            // Function to calculate x position based on date
+            const getTimelineX = (date) => {
+                const time = new Date(date).getTime();
+                const availableWidth = graphElement.clientWidth - 200;
+                const position = (time - earliestDate) / timeRange;
+                return 100 + (position * availableWidth);
+            };
+            
+            // Initialize the graph
+            const Graph = ForceGraph()
+                (graphElement)
+                .graphData(timelineData)
+                .nodeId('id')
+                .nodeVal(5)
+                .nodeLabel('name')
+                .nodeColor('#333')
+                .linkColor('#999')
+                .onNodeClick(node => {
+                    // Update details panel
+                    eventTitle.textContent = node.name;
+                    eventDate.textContent = new Date(node.date).toLocaleDateString();
+                    eventDescription.textContent = node.description;
+                    eventType.textContent = node.type.charAt(0).toUpperCase() + node.type.slice(1);
+                    
+                    // Show details panel
+                    eventDetails.classList.remove('hidden');
+                    eventDetails.classList.add('visible');
+                    
+                    // Center on node but don't zoom too much to keep context
+                    Graph.centerAt(node.x, node.y, 800);
+                    Graph.zoom(1.2, 800);
+                })
+                // Forces configuration
+                .d3Force('charge', d3.forceManyBody().strength(-100))
+                .d3Force('link', d3.forceLink().id(d => d.id).distance(50))
+                .d3Force('x', d3.forceX(node => getTimelineX(node.date)).strength(0.3))
+                .d3Force('y', d3.forceY(graphElement.clientHeight / 2).strength(0.1));
+
+            // Window resize handler
+            window.addEventListener('resize', () => {
+                Graph.width(graphElement.clientWidth).height(graphElement.clientHeight);
+                Graph.d3Force('x').x(node => getTimelineX(node.date));
+            });
+            
+            // Close details panel handler
+            closeDetailsBtn.addEventListener('click', () => {
+                eventDetails.classList.remove('visible');
+                eventDetails.classList.add('hidden');
+            });
+        });
+    </script>
+</body>
+</html> 
