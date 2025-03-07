@@ -10,81 +10,21 @@
     <script>
         const TIMELINE_DATA = {
             nodes: [
-                {
-                    id: "birth",
-                    name: "Birth",
-                    date: "1999-01-01",
-                    type: "life",
-                    description: "Born in Example City"
-                },
-                {
-                    id: "graduation",
-                    name: "High School Graduation",
-                    date: "2017-05-15",
-                    type: "education",
-                    description: "Graduated from Example High School"
-                },
-                {
-                    id: "college",
-                    name: "Started College",
-                    date: "2017-08-20",
-                    type: "education",
-                    description: "Began studies at Example University"
-                },
-                {
-                    id: "internship",
-                    name: "First Internship",
-                    date: "2019-06-01",
-                    type: "work",
-                    description: "Summer internship at Tech Company"
-                },
-                {
-                    id: "graduation_college",
-                    name: "College Graduation",
-                    date: "2021-05-15",
-                    type: "education",
-                    description: "Graduated with BS in Computer Science"
-                },
-                {
-                    id: "first_job",
-                    name: "First Full-time Job",
-                    date: "2021-07-01",
-                    type: "work",
-                    description: "Started as Software Engineer at Tech Corp"
-                },
-                {
-                    id: "today",
-                    name: "Today",
-                    date: "2024-03-19",
-                    type: "life",
-                    description: "Current date"
-                }
+                { id: "birth", name: "Birth", date: "1999-01-01", type: "life", description: "Born in Example City" },
+                { id: "graduation", name: "High School Graduation", date: "2017-05-15", type: "education", description: "Graduated from Example High School" },
+                { id: "college", name: "Started College", date: "2017-08-20", type: "education", description: "Began studies at Example University" },
+                { id: "internship", name: "First Internship", date: "2019-06-01", type: "work", description: "Summer internship at Tech Company" },
+                { id: "graduation_college", name: "College Graduation", date: "2021-05-15", type: "education", description: "Graduated with BS in Computer Science" },
+                { id: "first_job", name: "First Full-time Job", date: "2021-07-01", type: "work", description: "Started as Software Engineer at Tech Corp" },
+                { id: "today", name: "Today", date: "2024-03-19", type: "life", description: "Current date" }
             ],
             links: [
-                {
-                    source: "birth",
-                    target: "graduation"
-                },
-                {
-                    source: "graduation",
-                    target: "college"
-                },
-                {
-                    source: "college",
-                    target: "internship"
-                },
-                {
-                    source: "internship",
-                    target: "graduation_college"
-                },
-                {
-                    source: "graduation_college",
-                    target: "first_job"
-                },
-                {
-                    source: "first_job",
-                    target: "today"
-                }
+                { source: "birth", target: "graduation" },
+                { source: "graduation", target: "college" },
+                { source: "college", target: "internship" },
+                { source: "internship", target: "graduation_college" },
+                { source: "graduation_college", target: "first_job" },
+                { source: "first_job", target: "today" }
             ]
         };
     </script>
