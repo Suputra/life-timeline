@@ -26,9 +26,14 @@ class EventManager:
     def run_git_command(self, args: List[str], check: bool = True) -> Tuple[int, str, str]:
         """Run a git command and return its output."""
         try:
+            print(f"Running git command: git {' '.join(args)}")  # Debug output
             process = subprocess.run(['git'] + args, 
                                   capture_output=True, 
                                   text=True)
+            print(f"Return code: {process.returncode}")  # Debug output
+            print(f"Stdout: {process.stdout.strip()}")  # Debug output
+            print(f"Stderr: {process.stderr.strip()}")  # Debug output
+            
             if check and process.returncode != 0:
                 raise GitError(f"Git command failed: {process.stderr.strip()}")
             return process.returncode, process.stdout.strip(), process.stderr.strip()
@@ -38,6 +43,7 @@ class EventManager:
     def ensure_git_config(self):
         """Ensure git is configured with user information."""
         try:
+            print("Checking git configuration...")  # Debug output
             self.run_git_command(['config', 'user.name'], check=False)
             self.run_git_command(['config', 'user.email'], check=False)
         except GitError:
@@ -113,6 +119,8 @@ class EventManager:
             event_filename = f"{date_str}-{slug}.md"
             event_path = self.events_dir / event_filename
 
+            print(f"Creating event file: {event_path}")  # Debug output
+
             # Create media directory if media files are provided
             media_dir = None
             if media_files:
@@ -158,14 +166,16 @@ class EventManager:
                     target = media_dir / source.name
                     shutil.copy2(source, target)
 
+            print("Staging changes...")  # Debug output
             # Stage the changes
             self.run_git_command(['add', str(event_path)])
             if media_files:
                 self.run_git_command(['add', str(media_dir)])
 
+            print("Committing changes...")  # Debug output
             # Commit the event
             commit_msg = f'event: {title} ({date_str})'
-            self.run_git_command(['commit', '-m', commit_msg])
+            self.run_git_command(['commit', '-m', f'"{commit_msg}"'])
             print(f"Created and committed event: {event_path}")
 
             # Handle past events by rebasing if necessary
