@@ -4,9 +4,36 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Life Timeline</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🕐</text></svg>">
-    <script src="https://d3js.org/d3.v7.min.js" defer></script>
-    <script src="https://unpkg.com/force-graph" defer></script>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>��</text></svg>">
+    <!-- Preload critical resources -->
+    <link rel="preload" href="https://d3js.org/d3.v7.min.js" as="script">
+    <link rel="preload" href="https://unpkg.com/force-graph" as="script">
+    <!-- Load scripts with better error handling -->
+    <script>
+        // Create a promise-based loading system
+        const loadScript = (src) => {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        };
+
+        // Load our dependencies in order
+        Promise.all([
+            loadScript('https://d3js.org/d3.v7.min.js'),
+            loadScript('https://unpkg.com/force-graph')
+        ]).then(() => {
+            console.log('All libraries loaded successfully');
+            if (window.initializeGraph) {
+                window.initializeGraph();
+            }
+        }).catch(error => {
+            console.error('Error loading libraries:', error);
+        });
+    </script>
     <!-- Timeline Data -->
     <script>
         const TIMELINE_DATA = {
@@ -452,317 +479,336 @@
 
         // Function to initialize the graph with retry mechanism
         function initializeGraph() {
+            // If already initialized, don't initialize again
+            if (window.graphInitialized) {
+                console.log('Graph already initialized');
+                return;
+            }
+
             if (!checkLibrariesLoaded()) {
                 console.log('Libraries not loaded yet, retrying...');
                 setTimeout(initializeGraph, 100);
                 return;
             }
 
+            // Set initialization flag
+            window.graphInitialized = true;
+
             console.log('Libraries loaded, initializing graph...');
             
-            // DOM elements
-            const graphElement = document.getElementById('graph');
-            const eventDetails = document.getElementById('event-details');
-            const eventTitle = document.getElementById('event-title');
-            const eventDate = document.getElementById('event-date');
-            const eventDescription = document.getElementById('event-description');
-            const eventType = document.getElementById('event-type');
-            const closeDetailsBtn = document.getElementById('close-details');
-            
-            // Filter modal elements
-            const filterBtn = document.getElementById('filter-btn');
-            const filterModal = document.getElementById('filter-modal');
-            const closeFilterBtn = document.getElementById('close-filter');
-            const filterOptions = document.getElementById('filter-options');
-            const applyFilterBtn = document.getElementById('apply-filter');
-            const resetFilterBtn = document.getElementById('reset-filter');
-            
-            // Track selected node
-            let selectedNode = null;
-            let timelineData = TIMELINE_DATA;
-            let filteredData = {...timelineData};
-            let activeFilters = new Set();
-            
-            // Extract unique event types
-            const getEventTypes = () => {
-                const types = new Set();
-                timelineData.nodes.forEach(node => {
-                    if (node.type) {
-                        types.add(node.type);
-                    }
-                });
-                return Array.from(types);
-            };
-            
-            // Populate filter options
-            const populateFilterOptions = () => {
-                filterOptions.innerHTML = '';
-                const eventTypes = getEventTypes();
+            // Ensure DOM is ready
+            if (!document.getElementById('graph')) {
+                console.error('Graph container not found');
+                return;
+            }
+
+            try {
+                // DOM elements
+                const graphElement = document.getElementById('graph');
+                const eventDetails = document.getElementById('event-details');
+                const eventTitle = document.getElementById('event-title');
+                const eventDate = document.getElementById('event-date');
+                const eventDescription = document.getElementById('event-description');
+                const eventType = document.getElementById('event-type');
+                const closeDetailsBtn = document.getElementById('close-details');
                 
-                eventTypes.forEach(type => {
-                    const label = document.createElement('label');
-                    const checkbox = document.createElement('input');
-                    checkbox.type = 'checkbox';
-                    checkbox.value = type;
-                    checkbox.checked = !activeFilters.size || activeFilters.has(type);
-                    checkbox.id = `filter-${type}`;
+                // Filter modal elements
+                const filterBtn = document.getElementById('filter-btn');
+                const filterModal = document.getElementById('filter-modal');
+                const closeFilterBtn = document.getElementById('close-filter');
+                const filterOptions = document.getElementById('filter-options');
+                const applyFilterBtn = document.getElementById('apply-filter');
+                const resetFilterBtn = document.getElementById('reset-filter');
+                
+                // Track selected node
+                let selectedNode = null;
+                let timelineData = TIMELINE_DATA;
+                let filteredData = {...timelineData};
+                let activeFilters = new Set();
+                
+                // Extract unique event types
+                const getEventTypes = () => {
+                    const types = new Set();
+                    timelineData.nodes.forEach(node => {
+                        if (node.type) {
+                            types.add(node.type);
+                        }
+                    });
+                    return Array.from(types);
+                };
+                
+                // Populate filter options
+                const populateFilterOptions = () => {
+                    filterOptions.innerHTML = '';
+                    const eventTypes = getEventTypes();
                     
-                    label.appendChild(checkbox);
-                    label.appendChild(document.createTextNode(` ${type.charAt(0).toUpperCase() + type.slice(1)}`));
-                    filterOptions.appendChild(label);
+                    eventTypes.forEach(type => {
+                        const label = document.createElement('label');
+                        const checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.value = type;
+                        checkbox.checked = !activeFilters.size || activeFilters.has(type);
+                        checkbox.id = `filter-${type}`;
+                        
+                        label.appendChild(checkbox);
+                        label.appendChild(document.createTextNode(` ${type.charAt(0).toUpperCase() + type.slice(1)}`));
+                        filterOptions.appendChild(label);
+                    });
+                };
+                
+                // Filter data based on selected types
+                const filterData = () => {
+                    if (!activeFilters.size) {
+                        filteredData = {...timelineData};
+                        return;
+                    }
+                    
+                    // Filter nodes based on selected types
+                    const filteredNodes = timelineData.nodes.filter(node => activeFilters.has(node.type));
+                    const filteredNodeIds = new Set(filteredNodes.map(node => node.id));
+                    
+                    // Filter links that connect to filtered nodes
+                    const filteredLinks = timelineData.links.filter(link => 
+                        filteredNodeIds.has(link.source.id || link.source) && 
+                        filteredNodeIds.has(link.target.id || link.target)
+                    );
+                    
+                    filteredData = {
+                        nodes: filteredNodes,
+                        links: filteredLinks
+                    };
+                };
+                
+                // Function to update the graph with filtered data
+                const updateGraph = () => {
+                    // Apply filters to data
+                    filterData();
+                    
+                    // Update the graph with filtered data
+                    Graph.graphData(filteredData);
+                    
+                    // If we had a selected node and it's still in the filtered data, keep it highlighted
+                    if (selectedNode) {
+                        const nodeStillExists = filteredData.nodes.some(node => node.id === selectedNode.id);
+                        if (!nodeStillExists) {
+                            // Selected node was filtered out
+                            selectedNode = null;
+                            eventDetails.classList.remove('visible');
+                            eventDetails.classList.add('hidden');
+                        } else {
+                            // Re-highlight the selected node
+                            highlightNodes(selectedNode.id);
+                        }
+                    }
+                    
+                    // Reset zoom to fit all visible nodes
+                    Graph.zoomToFit(800, 40);
+                };
+                
+                // Event listeners for filter modal
+                filterBtn.addEventListener('click', () => {
+                    populateFilterOptions();
+                    filterModal.classList.add('visible');
                 });
-            };
-            
-            // Filter data based on selected types
-            const filterData = () => {
-                if (!activeFilters.size) {
-                    filteredData = {...timelineData};
-                    return;
+                
+                closeFilterBtn.addEventListener('click', () => {
+                    filterModal.classList.remove('visible');
+                });
+                
+                applyFilterBtn.addEventListener('click', () => {
+                    // Get all checked filter options
+                    activeFilters.clear();
+                    const checkedOptions = filterOptions.querySelectorAll('input[type="checkbox"]:checked');
+                    checkedOptions.forEach(option => {
+                        activeFilters.add(option.value);
+                    });
+                    
+                    // Update graph with filtered data
+                    updateGraph();
+                    
+                    // Close the modal
+                    filterModal.classList.remove('visible');
+                });
+                
+                resetFilterBtn.addEventListener('click', () => {
+                    // Reset all checkboxes to checked
+                    const allOptions = filterOptions.querySelectorAll('input[type="checkbox"]');
+                    allOptions.forEach(option => {
+                        option.checked = true;
+                    });
+                    
+                    // Clear active filters
+                    activeFilters.clear();
+                    
+                    // Apply reset (show all nodes)
+                    updateGraph();
+                    
+                    // Close the modal
+                    filterModal.classList.remove('visible');
+                });
+                
+                // Function to highlight nodes and links
+                const highlightNodes = (nodeId) => {
+                    if (!nodeId || !filteredData) {
+                        // Reset if no node is selected
+                        if (!selectedNode) {
+                            Graph.nodeColor('#657b83').linkColor('#93a1a1');
+                        } else {
+                            // Keep highlighting for selected node
+                            const neighbors = new Set();
+                            filteredData.links.forEach(link => {
+                                if (link.source.id === selectedNode.id) neighbors.add(link.target.id);
+                                if (link.target.id === selectedNode.id) neighbors.add(link.source.id);
+                            });
+                            neighbors.add(selectedNode.id);
+
+                            Graph.nodeColor(n => neighbors.has(n.id) ? '#268bd2' : '#eee8d5')
+                                 .linkColor(l => (l.source.id === selectedNode.id || l.target.id === selectedNode.id) ? '#268bd2' : '#d8d4c5');
+                        }
+                        return;
+                    }
+
+                    // Highlight the node and its neighbors
+                    const neighbors = new Set();
+                    filteredData.links.forEach(link => {
+                        if (link.source.id === nodeId) neighbors.add(link.target.id);
+                        if (link.target.id === nodeId) neighbors.add(link.source.id);
+                    });
+                    neighbors.add(nodeId);
+
+                    Graph.nodeColor(n => neighbors.has(n.id) ? '#268bd2' : '#eee8d5')
+                         .linkColor(l => (l.source.id === nodeId || l.target.id === nodeId) ? '#268bd2' : '#d8d4c5');
+                };
+                
+                // Initialize the visualization
+                // Update today's date in the data
+                const todayNode = timelineData.nodes.find(node => node.id === 'today');
+                if (todayNode) {
+                    todayNode.date = new Date().toISOString().split('T')[0];
                 }
                 
-                // Filter nodes based on selected types
-                const filteredNodes = timelineData.nodes.filter(node => activeFilters.has(node.type));
-                const filteredNodeIds = new Set(filteredNodes.map(node => node.id));
+                // Sort nodes by date
+                const sortedNodes = [...timelineData.nodes].sort((a, b) => new Date(a.date) - new Date(b.date));
+                const earliestDate = new Date(sortedNodes[0].date).getTime();
+                const latestDate = new Date(sortedNodes[sortedNodes.length - 1].date).getTime();
+                const timeRange = latestDate - earliestDate;
                 
-                // Filter links that connect to filtered nodes
-                const filteredLinks = timelineData.links.filter(link => 
-                    filteredNodeIds.has(link.source.id || link.source) && 
-                    filteredNodeIds.has(link.target.id || link.target)
-                );
-                
-                filteredData = {
-                    nodes: filteredNodes,
-                    links: filteredLinks
+                // Function to calculate x position based on date
+                const getTimelineX = (date) => {
+                    const time = new Date(date).getTime();
+                    const availableWidth = graphElement.clientWidth - 200;
+                    const position = (time - earliestDate) / timeRange;
+                    return 100 + (position * availableWidth);
                 };
-            };
-            
-            // Function to update the graph with filtered data
-            const updateGraph = () => {
-                // Apply filters to data
-                filterData();
                 
-                // Update the graph with filtered data
-                Graph.graphData(filteredData);
-                
-                // If we had a selected node and it's still in the filtered data, keep it highlighted
-                if (selectedNode) {
-                    const nodeStillExists = filteredData.nodes.some(node => node.id === selectedNode.id);
-                    if (!nodeStillExists) {
-                        // Selected node was filtered out
+                // Initialize the graph
+                window.Graph = ForceGraph()
+                    (graphElement)
+                    .graphData(filteredData)
+                    .nodeId('id')
+                    .nodeVal(5)
+                    .nodeLabel('name')
+                    .nodeColor('#657b83') // Solarized base00 for nodes
+                    .linkColor('#93a1a1') // Solarized base1 for links
+                    .onNodeClick(node => {
+                        // Update selected node
+                        selectedNode = node;
+                        
+                        // Highlight the selected node and its connections
+                        highlightNodes(node.id);
+                        
+                        // Update details panel
+                        eventTitle.textContent = node.name;
+                        eventDate.textContent = new Date(node.date).toLocaleDateString();
+                        eventDescription.textContent = node.description;
+                        eventType.textContent = node.type.charAt(0).toUpperCase() + node.type.slice(1);
+                        
+                        // Show details panel
+                        eventDetails.classList.remove('hidden');
+                        eventDetails.classList.add('visible');
+                        
+                        // Center on node but don't zoom too much to keep context
+                        Graph.centerAt(node.x, node.y, 800);
+                        Graph.zoom(1.2, 800);
+                    })
+                    // Add background click handler to clear selection
+                    .onBackgroundClick(() => {
+                        // Clear selection
                         selectedNode = null;
+                        Graph.nodeColor('#657b83').linkColor('#93a1a1');
+                        
+                        // Hide details panel
                         eventDetails.classList.remove('visible');
                         eventDetails.classList.add('hidden');
-                    } else {
-                        // Re-highlight the selected node
-                        highlightNodes(selectedNode.id);
+                    })
+                    // Forces configuration
+                    .d3Force('charge', d3.forceManyBody().strength(-100))
+                    .d3Force('link', d3.forceLink().id(d => d.id).distance(50))
+                    .d3Force('x', d3.forceX(node => getTimelineX(node.date)).strength(0.3))
+                    .d3Force('y', d3.forceY(graphElement.clientHeight / 2).strength(0.1));
+
+                // Add hover effects
+                Graph
+                  .onNodeHover(node => {
+                    // If we have a selected node, don't allow hover highlighting on other nodes
+                    if (selectedNode) {
+                        return; // Keep the current highlighting for the selected node
                     }
-                }
-                
-                // Reset zoom to fit all visible nodes
-                Graph.zoomToFit(800, 40);
-            };
-            
-            // Event listeners for filter modal
-            filterBtn.addEventListener('click', () => {
-                populateFilterOptions();
-                filterModal.classList.add('visible');
-            });
-            
-            closeFilterBtn.addEventListener('click', () => {
-                filterModal.classList.remove('visible');
-            });
-            
-            applyFilterBtn.addEventListener('click', () => {
-                // Get all checked filter options
-                activeFilters.clear();
-                const checkedOptions = filterOptions.querySelectorAll('input[type="checkbox"]:checked');
-                checkedOptions.forEach(option => {
-                    activeFilters.add(option.value);
-                });
-                
-                // Update graph with filtered data
-                updateGraph();
-                
-                // Close the modal
-                filterModal.classList.remove('visible');
-            });
-            
-            resetFilterBtn.addEventListener('click', () => {
-                // Reset all checkboxes to checked
-                const allOptions = filterOptions.querySelectorAll('input[type="checkbox"]');
-                allOptions.forEach(option => {
-                    option.checked = true;
-                });
-                
-                // Clear active filters
-                activeFilters.clear();
-                
-                // Apply reset (show all nodes)
-                updateGraph();
-                
-                // Close the modal
-                filterModal.classList.remove('visible');
-            });
-            
-            // Function to highlight nodes and links
-            const highlightNodes = (nodeId) => {
-                if (!nodeId || !filteredData) {
-                    // Reset if no node is selected
-                    if (!selectedNode) {
+                    
+                    // No node is selected, so show hover effects
+                    if (!node) {
                         Graph.nodeColor('#657b83').linkColor('#93a1a1');
-                    } else {
-                        // Keep highlighting for selected node
-                        const neighbors = new Set();
-                        filteredData.links.forEach(link => {
-                            if (link.source.id === selectedNode.id) neighbors.add(link.target.id);
-                            if (link.target.id === selectedNode.id) neighbors.add(link.source.id);
-                        });
-                        neighbors.add(selectedNode.id);
-
-                        Graph.nodeColor(n => neighbors.has(n.id) ? '#268bd2' : '#eee8d5')
-                             .linkColor(l => (l.source.id === selectedNode.id || l.target.id === selectedNode.id) ? '#268bd2' : '#d8d4c5');
+                        return;
                     }
-                    return;
-                }
 
-                // Highlight the node and its neighbors
-                const neighbors = new Set();
-                filteredData.links.forEach(link => {
-                    if (link.source.id === nodeId) neighbors.add(link.target.id);
-                    if (link.target.id === nodeId) neighbors.add(link.source.id);
-                });
-                neighbors.add(nodeId);
-
-                Graph.nodeColor(n => neighbors.has(n.id) ? '#268bd2' : '#eee8d5')
-                     .linkColor(l => (l.source.id === nodeId || l.target.id === nodeId) ? '#268bd2' : '#d8d4c5');
-            };
-            
-            // Initialize the visualization
-            // Update today's date in the data
-            const todayNode = timelineData.nodes.find(node => node.id === 'today');
-            if (todayNode) {
-                todayNode.date = new Date().toISOString().split('T')[0];
-            }
-            
-            // Sort nodes by date
-            const sortedNodes = [...timelineData.nodes].sort((a, b) => new Date(a.date) - new Date(b.date));
-            const earliestDate = new Date(sortedNodes[0].date).getTime();
-            const latestDate = new Date(sortedNodes[sortedNodes.length - 1].date).getTime();
-            const timeRange = latestDate - earliestDate;
-            
-            // Function to calculate x position based on date
-            const getTimelineX = (date) => {
-                const time = new Date(date).getTime();
-                const availableWidth = graphElement.clientWidth - 200;
-                const position = (time - earliestDate) / timeRange;
-                return 100 + (position * availableWidth);
-            };
-            
-            // Initialize the graph
-            window.Graph = ForceGraph()
-                (graphElement)
-                .graphData(filteredData)
-                .nodeId('id')
-                .nodeVal(5)
-                .nodeLabel('name')
-                .nodeColor('#657b83') // Solarized base00 for nodes
-                .linkColor('#93a1a1') // Solarized base1 for links
-                .onNodeClick(node => {
-                    // Update selected node
-                    selectedNode = node;
-                    
-                    // Highlight the selected node and its connections
+                    // Highlight the hovered node and its neighbors
                     highlightNodes(node.id);
-                    
-                    // Update details panel
-                    eventTitle.textContent = node.name;
-                    eventDate.textContent = new Date(node.date).toLocaleDateString();
-                    eventDescription.textContent = node.description;
-                    eventType.textContent = node.type.charAt(0).toUpperCase() + node.type.slice(1);
-                    
-                    // Show details panel
-                    eventDetails.classList.remove('hidden');
-                    eventDetails.classList.add('visible');
-                    
-                    // Center on node but don't zoom too much to keep context
-                    Graph.centerAt(node.x, node.y, 800);
-                    Graph.zoom(1.2, 800);
-                })
-                // Add background click handler to clear selection
-                .onBackgroundClick(() => {
-                    // Clear selection
-                    selectedNode = null;
-                    Graph.nodeColor('#657b83').linkColor('#93a1a1');
-                    
-                    // Hide details panel
+                  });
+
+                // Window resize handler
+                window.addEventListener('resize', () => {
+                    Graph.width(graphElement.clientWidth).height(graphElement.clientHeight);
+                    Graph.d3Force('x').x(node => getTimelineX(node.date));
+                });
+                
+                // Close details panel handler
+                closeDetailsBtn.addEventListener('click', () => {
                     eventDetails.classList.remove('visible');
                     eventDetails.classList.add('hidden');
-                })
-                // Forces configuration
-                .d3Force('charge', d3.forceManyBody().strength(-100))
-                .d3Force('link', d3.forceLink().id(d => d.id).distance(50))
-                .d3Force('x', d3.forceX(node => getTimelineX(node.date)).strength(0.3))
-                .d3Force('y', d3.forceY(graphElement.clientHeight / 2).strength(0.1));
+                    
+                    // Optionally clear the selection when closing
+                    // Comment out the next two lines if you want highlighting to persist after closing
+                    selectedNode = null;
+                    if (Graph) {
+                        Graph.nodeColor('#657b83').linkColor('#93a1a1');
+                    }
+                });
 
-            // Add hover effects
-            Graph
-              .onNodeHover(node => {
-                // If we have a selected node, don't allow hover highlighting on other nodes
-                if (selectedNode) {
-                    return; // Keep the current highlighting for the selected node
-                }
-                
-                // No node is selected, so show hover effects
-                if (!node) {
+                // Reset graph button handler
+                document.getElementById('reset-btn').addEventListener('click', () => {
+                    // Clear selection
+                    selectedNode = null;
+                    
+                    // Reset node and link colors
                     Graph.nodeColor('#657b83').linkColor('#93a1a1');
-                    return;
-                }
-
-                // Highlight the hovered node and its neighbors
-                highlightNodes(node.id);
-              });
-
-            // Window resize handler
-            window.addEventListener('resize', () => {
-                Graph.width(graphElement.clientWidth).height(graphElement.clientHeight);
-                Graph.d3Force('x').x(node => getTimelineX(node.date));
-            });
-            
-            // Close details panel handler
-            closeDetailsBtn.addEventListener('click', () => {
-                eventDetails.classList.remove('visible');
-                eventDetails.classList.add('hidden');
-                
-                // Optionally clear the selection when closing
-                // Comment out the next two lines if you want highlighting to persist after closing
-                selectedNode = null;
-                if (Graph) {
-                    Graph.nodeColor('#657b83').linkColor('#93a1a1');
-                }
-            });
-
-            // Reset graph button handler
-            document.getElementById('reset-btn').addEventListener('click', () => {
-                // Clear selection
-                selectedNode = null;
-                
-                // Reset node and link colors
-                Graph.nodeColor('#657b83').linkColor('#93a1a1');
-                
-                // Hide details panel if visible
-                eventDetails.classList.remove('visible');
-                eventDetails.classList.add('hidden');
-                
-                // Reset active filters
-                activeFilters.clear();
-                
-                // Reset to original data
-                filteredData = {...timelineData};
-                Graph.graphData(filteredData);
-                
-                // Reset zoom and center the graph
-                Graph.zoomToFit(800, 40);
-            });
+                    
+                    // Hide details panel if visible
+                    eventDetails.classList.remove('visible');
+                    eventDetails.classList.add('hidden');
+                    
+                    // Reset active filters
+                    activeFilters.clear();
+                    
+                    // Reset to original data
+                    filteredData = {...timelineData};
+                    Graph.graphData(filteredData);
+                    
+                    // Reset zoom and center the graph
+                    Graph.zoomToFit(800, 40);
+                });
+            } catch (error) {
+                console.error('Error initializing graph:', error);
+            }
         }
 
         // Initialize the graph
