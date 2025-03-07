@@ -276,6 +276,27 @@
         margin-bottom: 10px;
     }
 
+    .refresh-tip {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: var(--bg-secondary);
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        box-shadow: var(--shadow);
+        z-index: 15;
+        text-align: center;
+        border: 1px solid var(--border-color);
+        opacity: 0.95;
+    }
+
+    .refresh-tip i {
+        margin-right: 6px;
+    }
+
     .filter-options {
         margin-bottom: 1.2rem;
         display: flex;
@@ -359,6 +380,11 @@
             <div id="event-description">Event description will appear here.</div>
             <div id="event-date"></div>
             <div id="event-type">Event Type</div>
+        </div>
+        
+        <div class="refresh-tip">
+            <i class="fas fa-sync-alt"></i>
+            If you don't see a graph, please refresh the page
         </div>
     </main>
 
