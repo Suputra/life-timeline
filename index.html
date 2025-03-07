@@ -4,34 +4,78 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Life Timeline</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>��</text></svg>">
-    <!-- Preload critical resources -->
-    <link rel="preload" href="https://d3js.org/d3.v7.min.js" as="script">
-    <link rel="preload" href="https://unpkg.com/force-graph" as="script">
-    <!-- Load scripts with better error handling -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🕐</text></svg>">
+    <!-- Fix the emoji in the favicon -->
+    <!-- Direct script loading with nomodule approach to prevent Quartz interference -->
     <script>
-        // Create a promise-based loading system
-        const loadScript = (src) => {
-            return new Promise((resolve, reject) => {
-                const script = document.createElement('script');
-                script.src = src;
-                script.onload = resolve;
-                script.onerror = reject;
-                document.head.appendChild(script);
-            });
-        };
-
-        // Load our dependencies in order
-        Promise.all([
-            loadScript('https://d3js.org/d3.v7.min.js'),
-            loadScript('https://unpkg.com/force-graph')
-        ]).then(() => {
-            console.log('All libraries loaded successfully');
-            if (window.initializeGraph) {
-                window.initializeGraph();
+        // Global namespace to prevent conflicts
+        window.LifeTimeline = {
+            initialized: false,
+            libraries: {
+                d3: false,
+                forceGraph: false
+            },
+            initialize: function() {
+                console.log("Timeline initialization starting...");
+                
+                // Prevent multiple initializations
+                if (this.initialized) {
+                    console.log("Already initialized");
+                    return;
+                }
+                
+                // Only initialize when both libraries are loaded
+                if (!this.libraries.d3 || !this.libraries.forceGraph) {
+                    console.log("Waiting for libraries...");
+                    return;
+                }
+                
+                console.log("All libraries loaded, initializing visualization");
+                this.initialized = true;
+                
+                // Call the actual initialization function
+                this.initializeVisualization();
+            },
+            
+            loadLibraries: function() {
+                // Load D3.js
+                const d3Script = document.createElement('script');
+                d3Script.src = "https://d3js.org/d3.v7.min.js";
+                d3Script.onload = () => {
+                    console.log("D3.js loaded");
+                    this.libraries.d3 = true;
+                    this.initialize();
+                };
+                d3Script.onerror = (e) => console.error("Error loading D3:", e);
+                document.head.appendChild(d3Script);
+                
+                // Load Force Graph
+                const fgScript = document.createElement('script');
+                fgScript.src = "https://unpkg.com/force-graph";
+                fgScript.onload = () => {
+                    console.log("Force Graph loaded");
+                    this.libraries.forceGraph = true;
+                    this.initialize();
+                };
+                fgScript.onerror = (e) => console.error("Error loading Force Graph:", e);
+                document.head.appendChild(fgScript);
             }
-        }).catch(error => {
-            console.error('Error loading libraries:', error);
+        };
+        
+        // Start loading libraries immediately
+        document.addEventListener('DOMContentLoaded', function() {
+            window.LifeTimeline.loadLibraries();
+        });
+        
+        // Fallback initialization for when loaded in an iframe or through other means
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                if (!window.LifeTimeline.initialized && 
+                    document.getElementById('graph')) {
+                    console.log("Fallback initialization");
+                    window.LifeTimeline.loadLibraries();
+                }
+            }, 500);
         });
     </script>
     <!-- Timeline Data -->
@@ -472,29 +516,9 @@
     </main>
 
     <script>
-        // Function to check if required libraries are loaded
-        function checkLibrariesLoaded() {
-            return typeof d3 !== 'undefined' && typeof ForceGraph !== 'undefined';
-        }
-
-        // Function to initialize the graph with retry mechanism
-        function initializeGraph() {
-            // If already initialized, don't initialize again
-            if (window.graphInitialized) {
-                console.log('Graph already initialized');
-                return;
-            }
-
-            if (!checkLibrariesLoaded()) {
-                console.log('Libraries not loaded yet, retrying...');
-                setTimeout(initializeGraph, 100);
-                return;
-            }
-
-            // Set initialization flag
-            window.graphInitialized = true;
-
-            console.log('Libraries loaded, initializing graph...');
+        // Add the initialization function to our LifeTimeline namespace
+        window.LifeTimeline.initializeVisualization = function() {
+            console.log("Starting visualization initialization");
             
             // Ensure DOM is ready
             if (!document.getElementById('graph')) {
@@ -806,13 +830,14 @@
                     // Reset zoom and center the graph
                     Graph.zoomToFit(800, 40);
                 });
+                
+                console.log("Graph initialization complete");
             } catch (error) {
                 console.error('Error initializing graph:', error);
             }
-        }
+        };
 
-        // Initialize the graph
-        initializeGraph();
+        // Old initialization code has been removed and replaced with the LifeTimeline namespace approach
     </script>
 </body>
 </html> 
