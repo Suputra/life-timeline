@@ -12,21 +12,32 @@
     <script>
     const TIMELINE_DATA = {
         nodes: [
-            { id: "birth", name: "Birth", date: "1999-01-01", type: "life", description: "Born in Example City" },
-            { id: "graduation", name: "High School Graduation", date: "2017-05-15", type: "education", description: "Graduated from Example High School" },
-            { id: "college", name: "Started College", date: "2017-08-20", type: "education", description: "Began studies at Example University" },
-            { id: "internship", name: "First Internship", date: "2019-06-01", type: "work", description: "Summer internship at Tech Company" },
-            { id: "graduation_college", name: "College Graduation", date: "2021-05-15", type: "education", description: "Graduated with BS in Computer Science" },
-            { id: "first_job", name: "First Full-time Job", date: "2021-07-01", type: "work", description: "Started as Software Engineer at Tech Corp" },
-            { id: "today", name: "Today", date: "2024-03-19", type: "life", description: "Current date" }
+            { id: "birth", name: "Birth", date: "2001-12-01", type: "life", description: "Born in the Dallas area" },
+            { id: "high_school", name: "High School", date: "2019-05-04", type: "education", description: "Attended the STEM Academy in the Philadelphia suburbs" },
+            { id: "high_school_graduation", name: "High School Graduation", date: "2019-05-04", type: "education", description: "Graduated High School" },
+            { id: "rit", name: "RIT", date: "2019-08-01", type: "education", description: "Attended RIT for one semester" },
+            { id: "community_college", name: "Community College", date: "2020-01-01", type: "education", description: "Attended Community College for one semester" },
+            { id: "georgia_tech", name: "Georgia Tech", date: "2020-08-01", type: "education", description: "Started at Georgia Tech" },
+            { id: "hs_work", name: "Electronics Prototyping", date: "2018-01-01", type: "work", description: "Worked at a local electronics prototyping company" },
+            { id: "gtri", name: "Georgia Tech Research Institute", date: "2021-01-01", type: "work", description: "Worked at Georgia Tech's Research Institute" },
+            { id: "zoox_internship", name: "Zoox Internship", date: "2022-01-01", type: "work", description: "Interned at Zoox" },
+            { id: "georgia_tech_graduation", name: "Georgia Tech Graduation", date: "2023-06-01", type: "education", description: "Graduated from Georgia Tech with a degree in Mechanical Engineering" },
+            { id: "ueda_lab", name: "Biorobotics Research", date: "2022-01-01", type: "research", description: "Research in GT's Biorobotics and Human Modelling Lab under Dr. Jun Ueda" },
+            { id: "zoox", name: "Zoox", date: "2022-01-01", type: "work", description: "Worked at Zoox since 2022" },
         ],
         links: [
-            { source: "birth", target: "graduation" },
-            { source: "graduation", target: "college" },
-            { source: "college", target: "internship" },
-            { source: "internship", target: "graduation_college" },
-            { source: "graduation_college", target: "first_job" },
-            { source: "first_job", target: "today" }
+            { source: "birth", target: "hs_work" },
+            { source: "hs_work", target: "high_school" },
+            { source: "high_school", target: "high_school_graduation" },
+            { source: "high_school_graduation", target: "rit" },
+            { source: "rit", target: "community_college" },
+            { source: "community_college", target: "georgia_tech" },
+            { source: "georgia_tech", target: "gtri" },
+            { source: "gtri", target: "zoox_internship" },
+            { source: "zoox_internship", target: "ueda_lab" },
+            { source: "ueda_lab", target: "georgia_tech_graduation" },
+            { source: "zoox_internship", target: "zoox" },
+
         ]
     };
     </script>
